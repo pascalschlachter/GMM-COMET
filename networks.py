@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torchmetrics import Accuracy, StatScores
 from scipy.stats import entropy
-from torchvision.models import resnet50, ResNet50_Weights, vit_b_16, ViT_B_16_Weights
+from torchvision.models import resnet50, ResNet50_Weights
 import math
 import os
 from utils import HScore, CrossEntropyLabelSmooth, CustomLRScheduler
@@ -20,39 +20,6 @@ def init_weights(m):
     elif classname.find('Linear') != -1:
         nn.init.xavier_normal_(m.weight)
         nn.init.zeros_(m.bias)
-
-
-class ViTBackbone(nn.Module):
-    def __init__(self):
-        super(ViTBackbone, self).__init__()
-        model_vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
-
-        self.conv_proj = model_vit.conv_proj  # Patch embedding (conv projection)
-        self.encoder = model_vit.encoder 
-        self.class_token = model_vit.class_token
-
-        self.patch_size = model_vit.patch_size
-        self.output_dim = model_vit.hidden_dim
-
-    def forward(self, x):
-        n, c, h, w = x.shape
-        
-
-        n_h = h // self.patch_size
-        n_w = w // self.patch_size
-
-        # Get the transformer embeddings
-        x = self.conv_proj(x)
-        x = x.reshape(n, self.output_dim, n_h * n_w)
-        x = x.permute(0, 2, 1)
-
-        # Expand the class token to the full batch
-        batch_class_token = self.class_token.expand(n, -1, -1)
-        x = torch.cat([batch_class_token, x], dim=1)
-
-        x = self.encoder(x)
-        x = x.mean(dim=1)  # Global average pooling (since ViT output is in sequence form)
-        return x
 
 
 class ResNetBackbone(nn.Module):
@@ -120,17 +87,12 @@ class Classifier(nn.Module):
 
 
 class BaseModule(L.LightningModule):
-    def __init__(self, datamodule, feature_dim, lr, ckpt_dir, backbone_model):
+    def __init__(self, datamodule, feature_dim, lr, ckpt_dir):
         super(BaseModule, self).__init__()
 
         self.known_classes_num = datamodule.shared_class_num + datamodule.source_private_class_num
 
-        if backbone_model == 'resnet':
-            self.backbone = ResNetBackbone()
-        elif backbone_model == 'vit':
-            self.backbone = ViTBackbone()
-        else:
-            raise NotImplementedError
+        self.backbone = ResNetBackbone()
         self.feature_extractor = FeatureExtractor(self.backbone.output_dim, feature_dim, type='bn')
         self.classifier = Classifier(feature_dim, self.known_classes_num, type='wn')
 
@@ -158,8 +120,8 @@ class BaseModule(L.LightningModule):
 
 class SourceModule(BaseModule):
     def __init__(self, datamodule, rejection_threshold=0.5, feature_dim=256, lr=1e-2, source_train_type='smooth',
-                 ckpt_dir='', backbone_model='resnet'):
-        super(SourceModule, self).__init__(datamodule, feature_dim, lr, rejection_threshold, ckpt_dir, backbone_model)
+                 ckpt_dir=''):
+        super(SourceModule, self).__init__(datamodule, feature_dim, lr, ckpt_dir)
 
         if source_train_type == 'smooth':
             self.train_loss = CrossEntropyLabelSmooth(num_classes=self.known_classes_num, epsilon=0.1, reduction=True)
@@ -167,6 +129,8 @@ class SourceModule(BaseModule):
             self.train_loss = CrossEntropyLabelSmooth(num_classes=self.known_classes_num, epsilon=0.0, reduction=True)
         else:
             raise ValueError('Unknown source_train_type:', source_train_type)
+        
+        self.rejection_threshold = rejection_threshold
 
         self.total_train_acc = Accuracy(task='multiclass', num_classes=self.known_classes_num)
 
@@ -258,9 +222,6 @@ class SourceModule(BaseModule):
             rej_target = torch.where(y == self.known_classes_num, 1, 0)
             rej_pred = torch.where(pred == self.known_classes_num, 1, 0)
             self.test_statscores.update(rej_pred, rej_target)
-
-        self.test_feature_embeddings = torch.cat([self.test_feature_embeddings, feature_embedding.cpu()], 0)
-        self.test_labels = torch.cat([self.test_labels, y.cpu()], 0)
 
     def on_test_epoch_end(self):
         if self.open_flag:

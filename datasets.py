@@ -127,43 +127,9 @@ class SFUniDADataModuleBase(L.LightningDataModule):
         return torch.utils.data.DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False, num_workers=8)
 
 
-class Office31DataModule(SFUniDADataModuleBase):
-    def __init__(self, batch_size, stage, category_shift='', train_domain='amazon', test_domain='dslr'):
-        data_dir = '../../../data/public/office-31/'
-
-        if category_shift == 'PDA':
-            self.shared_class_num = 21
-            self.source_private_class_num = 10
-            self.target_private_class_num = 0
-        elif category_shift == 'ODA':
-            self.shared_class_num = 21
-            self.source_private_class_num = 0
-            self.target_private_class_num = 10
-        elif category_shift == 'OPDA':
-            self.shared_class_num = 10
-            self.source_private_class_num = 10
-            self.target_private_class_num = 11
-        else:
-            self.shared_class_num = 31
-            self.source_private_class_num = 0
-            self.target_private_class_num = 0
-
-        print(f"Dataset: Office-31")
-        print(f"Train domain: {train_domain}")
-        print(f"Test domain: {test_domain}")
-        print(f"Category shift: {category_shift}")
-        print(f"Shared classes: {self.shared_class_num}")
-        print(f"Source privat classes: {self.source_private_class_num}")
-        print(f"Target privat classes: {self.target_private_class_num}")
-
-        super(Office31DataModule, self).__init__(batch_size, stage, data_dir, category_shift, train_domain,
-                                                 test_domain, self.shared_class_num, self.source_private_class_num,
-                                                 self.target_private_class_num)
-
-
 class DomainNetDataModule(SFUniDADataModuleBase):
     def __init__(self, batch_size, category_shift='', train_domain='painting', test_domain='real'):
-        data_dir = '../../../../data/public/DomainNet-126/'
+        data_dir = 'data/DomainNet/'
 
         if category_shift == 'PDA':
             self.shared_class_num = 200
@@ -191,58 +157,6 @@ class DomainNetDataModule(SFUniDADataModuleBase):
                                                   self.target_private_class_num)
 
 
-class VisDADataModule(SFUniDADataModuleBase):
-    def __init__(self, batch_size, category_shift='', train_domain='train', test_domain='test'):
-        data_dir = '../../../../data/public/visda-2017/'
-
-        if category_shift == 'OPDA':
-            self.shared_class_num = 6
-            self.source_private_class_num = 3
-            self.target_private_class_num = 3
-        elif category_shift == 'PDA':
-            self.shared_class_num = 6
-            self.source_private_class_num = 6
-            self.target_private_class_num = 0
-        elif category_shift == 'ODA':
-            self.shared_class_num = 6
-            self.source_private_class_num = 0
-            self.target_private_class_num = 6
-        else:
-            self.shared_class_num = 12
-            self.source_private_class_num = 0
-            self.target_private_class_num = 0
-
-        super(VisDADataModule, self).__init__(batch_size, data_dir, category_shift, train_domain,
-                                              test_domain, self.shared_class_num, self.source_private_class_num,
-                                              self.target_private_class_num)
-        
-
-class OfficeHomeDataModule(SFUniDADataModuleBase):
-    def __init__(self, batch_size, category_shift='', train_domain='Art', test_domain='Clipart'):
-        data_dir = '../../../../data/public/office-home/'
-
-        if category_shift == 'OPDA':
-            self.shared_class_num = 10
-            self.source_private_class_num = 5
-            self.target_private_class_num = 50
-        elif category_shift == 'PDA':
-            self.shared_class_num = 25
-            self.source_private_class_num = 40
-            self.target_private_class_num = 0
-        elif category_shift == 'ODA':
-            self.shared_class_num = 25
-            self.source_private_class_num = 0
-            self.target_private_class_num = 40
-        else:
-            self.shared_class_num = 65
-            self.source_private_class_num = 0
-            self.target_private_class_num = 0
-
-        super(OfficeHomeDataModule, self).__init__(batch_size, data_dir, category_shift, train_domain,
-                                                   test_domain, self.shared_class_num, self.source_private_class_num,
-                                                   self.target_private_class_num)
-        
-
 class CIFARDataModule(SFUniDADataModuleBase):
     def __init__(self, batch_size, data_dir, category_shift, shared_class_num, source_private_class_num, target_private_class_num, severity):
         self.severity = severity
@@ -258,7 +172,7 @@ class CIFARDataModule(SFUniDADataModuleBase):
                        'zoom_blur',
                        'snow', 
                        'frost', 
-                       'fog', 
+                       'fog', s
                        'brightness', 
                        'contrast',
                        'elastic_transform', 
@@ -337,7 +251,7 @@ class CIFARDataModule(SFUniDADataModuleBase):
 
 class CIFAR100CDataModule(CIFARDataModule):
     def __init__(self, batch_size, category_shift='', severity=5):
-        data_dir = '../../../../data/public/CIFAR-100-C/'
+        data_dir = 'data/CIFAR-100-C/'
 
         if category_shift == 'OPDA':
             shared_class_num = 40
@@ -362,7 +276,7 @@ class CIFAR100CDataModule(CIFARDataModule):
 
 class CIFAR10CDataModule(CIFARDataModule):
     def __init__(self, batch_size, category_shift='', severity=5):
-        data_dir = '../../../../data/public/CIFAR-10-C/'
+        data_dir = 'data/CIFAR-10-C/'
 
         if category_shift == 'OPDA':
             shared_class_num = 4

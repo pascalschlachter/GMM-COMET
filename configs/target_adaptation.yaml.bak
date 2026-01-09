@@ -1,0 +1,45 @@
+# lightning.pytorch==2.0.0
+seed_everything: True
+trainer:
+  accelerator: auto
+  devices: auto
+  num_nodes: 1
+  precision: 32
+  logger:
+    class_path: TensorBoardLogger
+    init_args:
+      # select logging path
+      save_dir: 'logs'
+      name: 'cifar100'
+  log_every_n_steps: 5
+  max_epochs: 1
+  min_epochs: null
+  check_val_every_n_epoch: 1
+  enable_checkpointing: False
+model:
+  class_path: adaptation.GmmBaAdaptationModule
+  init_args: 
+    # select hyperparameters
+    feature_dim: 256  # choose same number of feature dimensions as used for the source model (default is 256)
+    lr: 1e-3  # we used 1e-3 for all datasets
+    red_feature_dim: 64
+    p_reject: 0.5  # we used 0.65 for DomainNet and 0.5 for CIFAR100-C and CIFAR10-C
+    N_init: 50
+    augmentation: True
+    lam: 1
+    lam_consistency: 1  # we used 1 for DomainNet and CIFAR100-C and 2 CIFAR10-C
+    lam_source_consistency: 2  # we used 2 for DomainNet and CIFAR100-C and 5 CIFAR10-C
+    temperature: 0.1
+    alpha_GMM: 0.99  # we used 0.999 for DomainNet and 0.99 for CIFAR100-C and CIFAR10-C
+    ckpt_dir: 'source_models/cifar100/source_model_OPDA/checkpoints/source_ckpt.pt'  # select pre-trained source model matching the desired source domain and category shift
+    ood_metric: 'entropy_likelihood'
+    use_mean_teacher: True
+    ensemble: True
+    alpha_MT: 0.99  # we used 0.999 for DomainNet and 0.99 for CIFAR100-C and CIFAR10-C
+data:
+  class_path: datasets.CIFAR100DataModule  # change to datasets.DomainNetDataModule for DomainNet dataset and to datasets.CIFAR10DataModule for CIFAR10-C
+  init_args:
+    batch_size: 64  # we used 64 for all datasets
+    category_shift: 'OPDA'  # select category shift
+#    test_domain: ['painting', 'real', 'sketch']  # select target domains for DomainNet
+
